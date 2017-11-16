@@ -38,28 +38,28 @@ contract ControllerPolicy {
         bool isAgreement;
     }
 
-    mapping(address => PolicyAgreement) public agreementStructs;
-    address[] public agreementList;
+    mapping(address => PolicyAgreement) public policyAgreement;
+    address[] public agreements;
 
-    function isAgreement(address agreementAddress) public constant returns(bool isIndeed) {
-        return agreementStructs[agreementAddress].isAgreement;
+    function isAgreement(address agreement) public constant returns(bool isIndeed) {
+        return policyAgreement[agreement].isAgreement;
     }
 
   function getAgreementCount() public constant returns(uint agreementCount) {
-    return agreementList.length;
+    return agreements.length;
   }
 
-  function newAgreement(address agreementAddress, bytes32 agreementIdentifier) public returns(uint rowNumber) {
-    require(isAgreement(agreementAddress));
-    agreementStructs[agreementAddress].identifier = agreementIdentifier;
-    agreementStructs[agreementAddress].isAgreement = true;
-    return agreementList.push(agreementAddress) - 1;
+  function newAgreement(address agreement, bytes32 identifier) public returns(uint rowNumber) {
+    require(isAgreement(agreement));
+    policyAgreement[agreement].identifier = identifier;
+    policyAgreement[agreement].isAgreement = true;
+    return agreements.push(agreement) - 1;
   }
 
     //What update mechanisms do we need for the agreement?
-  function updateAgreement(address agreementAddress, bytes32 agreementIdentifier) public returns(bool success) {
-    require(isAgreement(agreementAddress));
-    agreementStructs[agreementAddress].identifier = agreementIdentifier;
+  function updateAgreement(address agreement, bytes32 identifier) public returns(bool success) {
+    require(isAgreement(agreement));
+    policyAgreement[agreement].identifier = identifier;
     return true;
   }
 }
