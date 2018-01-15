@@ -18,7 +18,7 @@ contract ControllerPolicy {
 
     Policy policy;
 
-    address controller;
+    address public controller;
 
     function ControllerPolicy () public {
         controller = msg.sender;
@@ -28,6 +28,7 @@ contract ControllerPolicy {
         policy = Policy(reference, hash, uri);
     }
 
+    //Must be owner + proposal
     function bind() private {
         state = States.Binding;
     }
@@ -55,6 +56,7 @@ contract ControllerPolicy {
     policyAgreement[agreement].isAgreement = true;
     return agreements.push(agreement) - 1;
   }
+  //PolicyAgreement - End
 
     //What update mechanisms do we need for the agreement?
   function updateAgreement(address agreement, bytes32 identifier) public returns(bool success) {
