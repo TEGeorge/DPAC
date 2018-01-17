@@ -11,13 +11,13 @@ contract ControllerPolicy {
 
     States state = States.Proposal;
 
-    struct Policy {
+    struct Doc {
         bytes32 reference;
         bytes32 hash;
         bytes32 uri;
     }
 
-    Policy policy;
+    Doc policy;
 
     address public controller;
 
@@ -26,7 +26,7 @@ contract ControllerPolicy {
     }
 
     function setPolicy (bytes32 reference, bytes32 hash, bytes32 uri) private {
-        policy = Policy(reference, hash, uri);
+        policy = Doc(reference, hash, uri);
     }
 
     //Must be owner + proposal
@@ -65,5 +65,30 @@ contract ControllerPolicy {
     require(isAgreement(agreement));
     policyAgreement[agreement].identifier = identifier;
     return true;
+  }
+
+    //PolicyProcessor - Storage Pattern (Mapped Structs with Index)
+    struct PolicyProcessor {
+        bytes32 identifier;
+        bool isProcessor;
+    }
+
+    mapping(address => PolicyProcessor) public policyProcessor;
+    address[] public processors;
+
+    function isProcessor(address processor) public constant returns(bool isIndeed) {
+        return policyProcessor[processor].isProcessor;
+    }
+
+  function getProcessorCount() public constant returns(uint processorCount) {
+    return processors.length;
+  }
+
+  function newProcessor(address processor, bytes32 identifier) public returns(uint rowNumber) {
+    //require(isAgreement(agreement));
+    address agreement = new Processor(this, processor);
+    PolicyProcessor[processor].identifier = identifier;
+    PolicyProcessor[processor].isProcessor = true;
+    return (processors.push(processor) - 1);
   }
 }
