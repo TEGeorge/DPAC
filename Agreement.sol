@@ -17,9 +17,10 @@ contract Agreement {
 
     address signatory;
 
-    function Agreement (address policy) public {
+    function Agreement (address policy, address signatoryAddress) public {
         controlPolicy = ControllerPolicy(policy);
         controller = controlPolicy.controller();
+        signatory = signatoryAddress;
     }
 
     function bind () public {

@@ -1,4 +1,5 @@
 pragma solidity ^0.4.11;
+import "./Agreement.sol";
 
 contract ControllerPolicy {
 
@@ -50,11 +51,12 @@ contract ControllerPolicy {
     return agreements.length;
   }
 
-  function newAgreement(address agreement, bytes32 identifier) public returns(uint rowNumber) {
-    require(isAgreement(agreement));
+  function newAgreement(address signatory, bytes32 identifier) public returns(uint rowNumber) {
+    //require(isAgreement(agreement));
+    address agreement = new Agreement(this, signatory);
     policyAgreement[agreement].identifier = identifier;
     policyAgreement[agreement].isAgreement = true;
-    return agreements.push(agreement) - 1;
+    return (agreements.push(agreement) - 1);
   }
   //PolicyAgreement - End
 
