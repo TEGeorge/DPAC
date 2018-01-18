@@ -1,5 +1,8 @@
 pragma solidity ^0.4.11;
 import "./Agreement.sol";
+import "./Processor.sol";
+import "./Auditor.sol";
+import "./Operation.sol";
 
 contract ControllerPolicy {
 
@@ -11,13 +14,13 @@ contract ControllerPolicy {
 
     States state = States.Proposal;
 
-    struct Doc {
+    struct Document {
         bytes32 reference;
         bytes32 hash;
         bytes32 uri;
     }
 
-    Doc policy;
+    Document policy;
 
     address public controller;
 
@@ -26,7 +29,7 @@ contract ControllerPolicy {
     }
 
     function setPolicy (bytes32 reference, bytes32 hash, bytes32 uri) private {
-        policy = Doc(reference, hash, uri);
+        policy = Document(reference, hash, uri);
     }
 
     //Must be owner + proposal
@@ -34,61 +37,89 @@ contract ControllerPolicy {
         state = States.Binding;
     }
 
-    //PolicyAgreement - Storage Pattern (Mapped Structs with Index)
-    struct PolicyAgreement {
-        bytes32 identifier;
-        bool isAgreement;
+    //Entities - Storage Pattern (Mapped Structs with Index) - Multiple Types
+
+    enum Entity {
+    Agreement,
+    Processor,
+    Auditor,
+    Operation
     }
 
-    mapping(address => PolicyAgreement) public policyAgreement;
+    struct Entities {
+        bytes32 identifier;
+        Entity typeOf;
+    }
+
+    mapping(address => Entities) public policyEntity;
     address[] public agreements;
-
-    function isAgreement(address agreement) public constant returns(bool isIndeed) {
-        return policyAgreement[agreement].isAgreement;
-    }
-
-  function getAgreementCount() public constant returns(uint agreementCount) {
-    return agreements.length;
-  }
-
-  function newAgreement(address signatory, bytes32 identifier) public returns(uint rowNumber) {
-    //require(isAgreement(agreement));
-    address agreement = new Agreement(this, signatory);
-    policyAgreement[agreement].identifier = identifier;
-    policyAgreement[agreement].isAgreement = true;
-    return (agreements.push(agreement) - 1);
-  }
-  //PolicyAgreement - End
-
-    //What update mechanisms do we need for the agreement?
-  function updateAgreement(address agreement, bytes32 identifier) public returns(bool success) {
-    require(isAgreement(agreement));
-    policyAgreement[agreement].identifier = identifier;
-    return true;
-  }
-
-    //PolicyProcessor - Storage Pattern (Mapped Structs with Index)
-    struct PolicyProcessor {
-        bytes32 identifier;
-        bool isProcessor;
-    }
-
-    mapping(address => PolicyProcessor) public policyProcessor;
     address[] public processors;
+    address[] public auditors;
+    address[] public operations;
 
-    function isProcessor(address processor) public constant returns(bool isIndeed) {
-        return policyProcessor[processor].isProcessor;
+    function entityIs(address entity, Entity typeOf) public constant returns(bool isIndeed) {
+        return policyEntity[entity].typeOf == typeOf;
     }
 
-  function getProcessorCount() public constant returns(uint processorCount) {
-    return processors.length;
+    function updateEntityIdentifier(address entity, bytes32 identifier) public returns(bool success) {
+        //require(isAgreement(agreement)); What requirement??
+        policyEntity[entity].identifier = identifier;
+        return true;
   }
 
-  function newProcessor(address processor, bytes32 identifier) public returns(uint rowNumber) {
-    //require(isAgreement(agreement));
-    address agreement = new Processor(this, processor);
-    PolicyProcessor[processor].identifier = identifier;
-    PolicyProcessor[processor].isProcessor = true;
-    return (processors.push(processor) - 1);
+    //Agreement Entities
+
+    function agreementCount() public constant returns(uint count) {
+        return agreements.length;
+    }
+
+    function generateAgreement(address signatory, bytes32 identifier) public returns(uint rowNumber) {
+        //require(isAgreement(agreement));
+        address agreement = new Agreement(this, signatory);
+        policyEntity[agreement].identifier = identifier;
+        policyEntity[agreement].typeOf = Entity.Agreement;
+        return (agreements.push(agreement) - 1);
+    }
+
+    //Processor Entities
+
+    function processorCount() public constant returns(uint count) {
+        return processors.length;
   }
+
+    function newProcessor(address processorOwner, bytes32 identifier) public returns(uint rowNumber) {
+        //require(isAgreement(agreement));
+        address processor = new Processor(this, processorOwner);
+        policyEntity[processor].identifier = identifier;
+        policyEntity[processor].typeOf = Entity.Processor;
+        return (processors.push(processor) - 1);
+    }
+
+    //Auditor Entities
+
+    function auditorCount() public constant returns(uint count) {
+        return auditors.length;
+    }
+
+    function newAuditor(address auditorOwner, bytes32 identifier) public returns(uint rowNumber) {
+        //require(isAgreement(agreement));
+        address auditor = new Auditor(this, auditorOwner);
+        policyEntity[auditor].identifier = identifier;
+        policyEntity[auditor].typeOf = Entity.Auditor;
+        return (auditors.push(auditor) - 1);
+    }
+
+    //Operation Entities
+    function operationCount() public constant returns(uint count) {
+        return auditors.length;
+    }
+
+    function newOperation(address operationOwner, bytes32 identifier) public returns(uint rowNumber) {
+        //require(isAgreement(agreement));
+        address operation = new Operation(this, operationOwner);
+        policyEntity[operation].identifier = identifier;
+        policyEntity[operation].typeOf = Entity.Operation;
+        return (operations.push(operation) - 1);
+    }
+
 }
