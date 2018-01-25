@@ -42,8 +42,7 @@ contract ControllerPolicy {
     enum Entity {
     Agreement,
     Processor,
-    Auditor,
-    Operation
+    Auditor
     }
 
     struct Entities {
@@ -55,7 +54,6 @@ contract ControllerPolicy {
     address[] public agreements;
     address[] public processors;
     address[] public auditors;
-    address[] public operations;
 
     function entityIs(address entity, Entity typeOf) public constant returns(bool isIndeed) {
         return policyEntity[entity].typeOf == typeOf;
@@ -109,17 +107,6 @@ contract ControllerPolicy {
         return (auditors.push(auditor) - 1);
     }
 
-    //Operation Entities
-    function operationCount() public constant returns(uint count) {
-        return auditors.length;
-    }
 
-    function newOperation(address operationOwner, bytes32 identifier) public returns(uint rowNumber) {
-        //require(isAgreement(agreement));
-        address operation = new Operation(this, operationOwner);
-        policyEntity[operation].identifier = identifier;
-        policyEntity[operation].typeOf = Entity.Operation;
-        return (operations.push(operation) - 1);
-    }
 
 }
