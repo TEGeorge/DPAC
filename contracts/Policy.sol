@@ -2,7 +2,6 @@ pragma solidity ^0.4.11;
 import "./Agreement.sol";
 import "./Processor.sol";
 import "./Auditor.sol";
-import "./Operation.sol";
 
 contract ControllerPolicy {
 

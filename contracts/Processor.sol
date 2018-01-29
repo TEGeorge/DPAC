@@ -19,8 +19,7 @@ contract Processor {
 
     struct Document {
         bytes32 reference;
-        bytes32 hash;
-        bytes32 uri;
+        
     }
 
     Document accessControl;
@@ -37,31 +36,31 @@ contract Processor {
 
     struct Operation {
         bytes32 identifier;
-        Document request;
+        bytes32 hash;
+        bytes32 uri;
         States state;
     }
     
-    address[] public operation;
+    Operation[] operations;
 
-    mapping(address => Operation) public operations;
+    //mapping(address => Operation) public operations;
 
     //Operation Entities
 
     function operationCount() public constant returns(uint count) {
-        return operation.length;
+        return operations.length;
     }
 
-    function newOperation(bytes32 identifier, Document request) public returns(uint rowNumber) {
+    function newOperation(bytes32 identifier, bytes32 hash, bytes32 uri) public returns(uint rowNumber) {
         //require(isAgreement(agreement));
-        address operationReferencce = new Operation();
-        operations[operationReferencce].identifier = identifier;
-        operations[operationReferencce].request = request;
-        operations[operationReferencce].state = States.Proposal;
-        return (operations.push(operation) - 1);
+        //address operationReferencce = new Operation();
+        Operation memory _operation = Operation(identifier, hash, uri, States.Proposal);
+
+        return (operations.push(_operation) - 1);
     }
 
-    function validateOperation(address operationReferencce) {
-        operations[operationReferencce].state = States.Binding;
-    }
+    //function validateOperation(address operationReferencce) {
+        //operations[operationReferencce].state = States.Binding;
+    //}
 
 }
