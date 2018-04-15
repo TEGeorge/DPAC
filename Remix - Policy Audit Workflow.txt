@@ -1,0 +1,9 @@
+1. Create Audit --Auditor
+
+2. Sign Audit --Controller
+
+3. Create Enforcement Contract
+
+4. Negoitate Value (2 bidders)?? How is this distributed
+
+5. 

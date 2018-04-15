@@ -1,0 +1,21 @@
+1. Create Policy
+"PolicyRef", "hash","http://test.com/policy"
+
+2. Bind Policy
+Bind function
+
+3. Agreement
+
+"0x14723a09acff6d2a60dcdf7aa4aff308fddc160c", "Bob"
+
+4. Get Agreement Contract address
+
+Agreement position 0
+
+5. Remix, copy address to create Contract
+
+6. Bind Agreement Contract
+
+----
+
+a. Give Policy Value

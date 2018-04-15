@@ -36,6 +36,10 @@ contract ControllerPolicy {
         state = States.Binding;
     }
 
+    function value() public returns(uint256 value) {
+        return this.balance;
+    }
+
     //Entities - Storage Pattern (Mapped Structs with Index) - Multiple Types
 
     enum Entity {

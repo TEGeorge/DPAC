@@ -1,0 +1,11 @@
+1. Create Processor
+
+2. Add Processor Access Control
+
+3. Sign Processor
+
+4. Processor is live --
+
+5. Add Operation
+
+6. Sign Operation

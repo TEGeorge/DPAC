@@ -19,7 +19,7 @@ contract Processor {
 
     struct Document {
         bytes32 reference;
-        
+        bytes32 hash;
     }
 
     Document accessControl;
@@ -28,7 +28,11 @@ contract Processor {
         controlPolicy = ControllerPolicy(policy);
         controller = controlPolicy.controller();
         processor = processorOwner;
-    }   
+    }
+
+    function addAccessControl (bytes32 ref, bytes32 documentHash) public {
+        accessControl = Document(ref, documentHash);
+    }
 
     function bind () public {
         state = States.Binding;
