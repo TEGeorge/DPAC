@@ -11,15 +11,15 @@ contract Auditor {
 
     States state = States.Proposal;
 
-    ControllerPolicy controlPolicy;
+    Policy policy;
 
     address controller;
 
     address auditor;
 
-    function Auditor (address policy, address auditorAddress) public {
-        controlPolicy = ControllerPolicy(policy);
-        controller = controlPolicy.controller();
+    function Auditor (address _policy, address auditorAddress) public {
+        policy = Policy(_policy);
+        controller = policy.controller();
         auditor = auditorAddress;
     }
 

@@ -11,15 +11,15 @@ contract Consent {
 
     States state = States.Proposal;
 
-    ControllerPolicy controlPolicy;
+    Policy policy;
 
     address controller;
 
     address signatory;
 
-    function Consent (address policy, address signatoryAddress) public {
-        controlPolicy = ControllerPolicy(policy);
-        controller = controlPolicy.controller();
+    function Consent (address _policy, address signatoryAddress) public {
+        policy = Policy(_policy);
+        controller = policy.controller();
         signatory = signatoryAddress;
     }
 

@@ -3,7 +3,7 @@ import "./Consent.sol";
 import "./Processor.sol";
 import "./Auditor.sol";
 
-contract ControllerPolicy {
+contract Policy {
 
     //Contract States, 
     enum States {
@@ -11,74 +11,80 @@ contract ControllerPolicy {
         Binding   //Signed and policy is live, minimal manipulation
     }
 
-    States state = States.Proposal;
+    States state = States.Proposal; //Set intial state
 
+    //Document data structure
     struct Document {
         bytes32 reference;
         bytes32 hash;
         bytes32 uri;
     }
 
-    Document policy;
+    //Document data type describing the policy rule set
+    Document policyDocument;
 
+    //Address of the controller / owner of the contract
     address public controller;
 
-    function ControllerPolicy () public {
+    //Constructur setting sender
+    function Policy () public {
         controller = msg.sender;
     }
 
+    //Define the policy document
     function setPolicy (bytes32 reference, bytes32 hash, bytes32 uri) IsProposal private {
-        policy = Document(reference, hash, uri);
+        policyDocument = Document(reference, hash, uri);
     }
 
-    //Must be owner + proposal
+    //Make Policy live, change state to binding, must be owner & proposal
     function bind() IsProposal private {
         state = States.Binding;
     }
 
-    //Policy Value
+    //Returns the Ether value stored within the policy
     function value() public returns(uint256 value) {
         return this.balance;
     }
 
-    function () payable {} //Fallback function, recieves Ether and adds to the value of the contract
+    //Fallback function, recieves Ether when transfered to policy address and adds to the value of the contract
+    function () payable {}
 
-    //Entities - Storage Pattern (Mapped Structs with Index) - Multiple Types
-
+    //Subcontract types
     enum Entity {
     Consent,
     Processor,
     Auditor
     }
-
+    //Subcontract meta data
     struct Entities {
         bytes32 identifier;
         Entity typeOf;
     }
-
+    
+    //Data storage for meta data + subcontracts
     mapping(address => Entities) public policyEntity;
     address[] public consents;
     address[] public processors;
     address[] public auditors;
 
-    function entityIs(address entity, Entity typeOf) public constant returns(bool isIndeed) {
-        return policyEntity[entity].typeOf == typeOf;
+    //Retrieve subcontract metadata associated with address
+    function getEntity(address _entity) public constant returns(Entities entity) {
+        return policyEntity[_entity];
     }
 
+    //Update identifier metadata associated with an address
     function updateEntityIdentifier(address entity, bytes32 identifier) IsBinding public returns(bool success) {
-        //require(isConsent(consent)); What requirement??
         policyEntity[entity].identifier = identifier;
         return true;
   }
 
     //Consent Entities
-
+    //Return length of consent subcontract array
     function consentCount() public constant returns(uint count) {
         return consents.length;
     }
-
+    //Generate Consent subcontract
     function generateConsent(address signatory, bytes32 identifier) IsBinding public returns(uint rowNumber) {
-        //require(isConsent(consent));
         address consent = new Consent(this, signatory);
         policyEntity[consent].identifier = identifier;
         policyEntity[consent].typeOf = Entity.Consent;
@@ -86,27 +92,25 @@ contract ControllerPolicy {
     }
 
     //Processor Entities
-
+    ///Return length of processor subcontract array
     function processorCount() public constant returns(uint count) {
         return processors.length;
-  }
-
-    function newProcessor(address processorOwner, bytes32 identifier) IsBinding public returns(uint rowNumber) {
-        //require(isConsent(consent));
-        address processor = new Processor(this, processorOwner);
+    }
+    //Create new processor subcontract
+    function newProcessor(address _processor, bytes32 identifier) IsBinding public returns(uint rowNumber) {
+        address processor = new Processor(this, _processor);
         policyEntity[processor].identifier = identifier;
         policyEntity[processor].typeOf = Entity.Processor;
         return (processors.push(processor) - 1);
     }
 
     //Auditor Entities
-
+    //Return length of auditor subcontract array
     function auditorCount() public constant returns(uint count) {
         return auditors.length;
     }
-
+    //Create new auditor subcontract
     function newAuditor(address auditorOwner, bytes32 identifier) IsBinding public returns(uint rowNumber) {
-        //require(isConsent(consent));
         address auditor = new Auditor(this, auditorOwner);
         policyEntity[auditor].identifier = identifier;
         policyEntity[auditor].typeOf = Entity.Auditor;
@@ -114,17 +118,17 @@ contract ControllerPolicy {
     }
 
     //Require & Modifier functions
-
+    //Asserts is state is proposal and function call made by controller
     modifier IsProposal() {
         require(StateIs(States.Proposal));
         _;
     }
-
+    //Asserts is state is binding and function call made by controller
     modifier IsBinding() {
         require(StateIs(States.Binding));
         _;
     }
-
+    //Sub function used to assert state and controller
     function StateIs(States _state) returns (bool result) {
         return (msg.sender==controller && state==_state);    
     }

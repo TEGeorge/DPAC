@@ -11,7 +11,7 @@ contract Processor {
 
     States state = States.Proposal;
 
-    ControllerPolicy controlPolicy;
+    Policy policy;
 
     address controller;
 
@@ -24,9 +24,9 @@ contract Processor {
 
     Document accessControl;
 
-    function Processor (address policy, address processorOwner) public {
-        controlPolicy = ControllerPolicy(policy);
-        controller = controlPolicy.controller();
+    function Processor (address _policy, address processorOwner) public {
+        policy = Policy(_policy);
+        controller = policy.controller();
         processor = processorOwner;
     }
 
