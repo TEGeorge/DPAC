@@ -1,5 +1,5 @@
 pragma solidity ^0.4.11;
-import "./Agreement.sol";
+import "./Consent.sol";
 import "./Processor.sol";
 import "./Auditor.sol";
 
@@ -27,23 +27,26 @@ contract ControllerPolicy {
         controller = msg.sender;
     }
 
-    function setPolicy (bytes32 reference, bytes32 hash, bytes32 uri) private {
+    function setPolicy (bytes32 reference, bytes32 hash, bytes32 uri) IsProposal private {
         policy = Document(reference, hash, uri);
     }
 
     //Must be owner + proposal
-    function bind() private {
+    function bind() IsProposal private {
         state = States.Binding;
     }
 
+    //Policy Value
     function value() public returns(uint256 value) {
         return this.balance;
     }
 
+    function () payable {} //Fallback function, recieves Ether and adds to the value of the contract
+
     //Entities - Storage Pattern (Mapped Structs with Index) - Multiple Types
 
     enum Entity {
-    Agreement,
+    Consent,
     Processor,
     Auditor
     }
@@ -54,7 +57,7 @@ contract ControllerPolicy {
     }
 
     mapping(address => Entities) public policyEntity;
-    address[] public agreements;
+    address[] public consents;
     address[] public processors;
     address[] public auditors;
 
@@ -62,24 +65,24 @@ contract ControllerPolicy {
         return policyEntity[entity].typeOf == typeOf;
     }
 
-    function updateEntityIdentifier(address entity, bytes32 identifier) public returns(bool success) {
-        //require(isAgreement(agreement)); What requirement??
+    function updateEntityIdentifier(address entity, bytes32 identifier) IsBinding public returns(bool success) {
+        //require(isConsent(consent)); What requirement??
         policyEntity[entity].identifier = identifier;
         return true;
   }
 
-    //Agreement Entities
+    //Consent Entities
 
-    function agreementCount() public constant returns(uint count) {
-        return agreements.length;
+    function consentCount() public constant returns(uint count) {
+        return consents.length;
     }
 
-    function generateAgreement(address signatory, bytes32 identifier) public returns(uint rowNumber) {
-        //require(isAgreement(agreement));
-        address agreement = new Agreement(this, signatory);
-        policyEntity[agreement].identifier = identifier;
-        policyEntity[agreement].typeOf = Entity.Agreement;
-        return (agreements.push(agreement) - 1);
+    function generateConsent(address signatory, bytes32 identifier) IsBinding public returns(uint rowNumber) {
+        //require(isConsent(consent));
+        address consent = new Consent(this, signatory);
+        policyEntity[consent].identifier = identifier;
+        policyEntity[consent].typeOf = Entity.Consent;
+        return (consents.push(consent) - 1);
     }
 
     //Processor Entities
@@ -88,8 +91,8 @@ contract ControllerPolicy {
         return processors.length;
   }
 
-    function newProcessor(address processorOwner, bytes32 identifier) public returns(uint rowNumber) {
-        //require(isAgreement(agreement));
+    function newProcessor(address processorOwner, bytes32 identifier) IsBinding public returns(uint rowNumber) {
+        //require(isConsent(consent));
         address processor = new Processor(this, processorOwner);
         policyEntity[processor].identifier = identifier;
         policyEntity[processor].typeOf = Entity.Processor;
@@ -102,14 +105,27 @@ contract ControllerPolicy {
         return auditors.length;
     }
 
-    function newAuditor(address auditorOwner, bytes32 identifier) public returns(uint rowNumber) {
-        //require(isAgreement(agreement));
+    function newAuditor(address auditorOwner, bytes32 identifier) IsBinding public returns(uint rowNumber) {
+        //require(isConsent(consent));
         address auditor = new Auditor(this, auditorOwner);
         policyEntity[auditor].identifier = identifier;
         policyEntity[auditor].typeOf = Entity.Auditor;
         return (auditors.push(auditor) - 1);
     }
 
+    //Require & Modifier functions
 
+    modifier IsProposal() {
+        require(StateIs(States.Proposal));
+        _;
+    }
 
+    modifier IsBinding() {
+        require(StateIs(States.Binding));
+        _;
+    }
+
+    function StateIs(States _state) returns (bool result) {
+        return (msg.sender==controller && state==_state);    
+    }
 }

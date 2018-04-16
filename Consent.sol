@@ -1,12 +1,12 @@
 pragma solidity ^0.4.11;
 import "./Policy.sol";
 
-contract Agreement {
+contract Consent {
 
     //Contract States used for access control and signing, 
     enum States {
         Proposal, //Before being signed, allows manipulation
-        Binding   //Signed and agreement is live, minimal manipulation
+        Binding   //Signed and consent is live, minimal manipulation
     }
 
     States state = States.Proposal;
@@ -17,7 +17,7 @@ contract Agreement {
 
     address signatory;
 
-    function Agreement (address policy, address signatoryAddress) public {
+    function Consent (address policy, address signatoryAddress) public {
         controlPolicy = ControllerPolicy(policy);
         controller = controlPolicy.controller();
         signatory = signatoryAddress;
