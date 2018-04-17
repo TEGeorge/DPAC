@@ -13,18 +13,19 @@ contract Auditor {
 
     Policy policy;
 
-    address controller;
-
     address auditor;
 
-    function Auditor (address _policy, address auditorAddress) public {
+    function Auditor (address _policy, address _auditor) public {
         policy = Policy(_policy);
-        controller = policy.controller();
-        auditor = auditorAddress;
+        auditor = _auditor;
     }
 
     function bind () public {
+        require(msg.sender == auditor && state == States.Binding);
         state = States.Binding;
     }
+
+    
+
 
 }

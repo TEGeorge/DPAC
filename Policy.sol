@@ -2,6 +2,7 @@ pragma solidity ^0.4.11;
 import "./Consent.sol";
 import "./Processor.sol";
 import "./Auditor.sol";
+import "./Enforce.sol";
 
 contract Policy {
 
@@ -15,16 +16,26 @@ contract Policy {
 
     //Document data structure
     struct Document {
-        bytes32 reference;
+        bytes32 id;
         bytes32 hash;
         bytes32 uri;
     }
 
     //Document data type describing the policy rule set
-    Document policyDocument;
-
+    Document public policyDocument;
     //Address of the controller / owner of the contract
     address public controller;
+    //Address of the trusted third party for enforcement
+    address public authority;
+    //Payout percentage value for a successful auditor- default 10%
+    uint public payout = 10;
+    //Policy contracts value - represents the value required before contract can be considered valid 
+    //if componstation is distributed the value of the contract must meet this value to be considerd valid
+    uint public minValue = this.balance;
+
+    function getController () public constant returns (address) {
+        return controller;
+    }
 
     //Constructur setting sender
     function Policy () public {
@@ -32,8 +43,17 @@ contract Policy {
     }
 
     //Define the policy document
-    function setPolicy (bytes32 reference, bytes32 hash, bytes32 uri) IsProposal private {
-        policyDocument = Document(reference, hash, uri);
+    function setPolicy (bytes32 _id, bytes32 _hash, bytes32 _uri) IsProposal private {
+        policyDocument = Document(_id, _hash, _uri);
+    }
+    //Define the policy authority resolves in the case of disputes
+    function setAuthority(address _authority) IsProposal private {
+        authority = _authority;
+    }
+
+    function setPayout(uint _percentage) IsProposal private {
+        require(_percentage > 0 && _percentage <= 100);
+        payout = _percentage;
     }
 
     //Make Policy live, change state to binding, must be owner & proposal
@@ -41,54 +61,70 @@ contract Policy {
         state = States.Binding;
     }
 
-    //Returns the Ether value stored within the policy
-    function value() public returns(uint256 value) {
-        return this.balance;
+    //Fallback function, recieves Ether when transfered to policy address and adds to the value of the contract
+    function () payable {
+        if (this.balance + msg.value >= minValue) {
+            minValue = this.balance + msg.value;
+        }
     }
 
-    //Fallback function, recieves Ether when transfered to policy address and adds to the value of the contract
-    function () payable {}
-
     //Subcontract types
-    enum Entity {
+    enum EntityType {
     Consent,
     Processor,
-    Auditor
+    Auditor,
+    Enforce
     }
     //Subcontract meta data
     struct Entities {
-        bytes32 identifier;
-        Entity typeOf;
+        bytes32 id;
+        uint index;
+        EntityType typeOf;
     }
+
+    //Transfer value
     
     //Data storage for meta data + subcontracts
-    mapping(address => Entities) public policyEntity;
-    address[] public consents;
+    mapping(address => Entities) public entity;
+    address[] public consentors;
     address[] public processors;
     address[] public auditors;
 
     //Retrieve subcontract metadata associated with address
     function getEntity(address _entity) public constant returns(Entities entity) {
-        return policyEntity[_entity];
+        return entity[_entity];
     }
 
     //Update identifier metadata associated with an address
-    function updateEntityIdentifier(address entity, bytes32 identifier) IsBinding public returns(bool success) {
-        policyEntity[entity].identifier = identifier;
+    function updateEntityIdentifier(address _entity, bytes32 _id) IsBinding public returns(bool success) {
+        entity[_entity].id = _id;
         return true;
-  }
+    }
+
+    function isAuditor(address _auditor) public returns(bool isAuditor) {
+        return (entity[_auditor].typeOf == EntityType.Auditor);
+    }
+
+    function isConsent(address _consent) public returns(bool isConsent) {
+        return (entity[_consent].typeOf == EntityType.Consent);
+    }
+
+    function isProcessor(address _processor) public returns(bool isProcessor) {
+        return (entity[_processor].typeOf == EntityType.Processor);
+    }
 
     //Consent Entities
     //Return length of consent subcontract array
     function consentCount() public constant returns(uint count) {
-        return consents.length;
+        return consentors.length;
     }
     //Generate Consent subcontract
-    function generateConsent(address signatory, bytes32 identifier) IsBinding public returns(uint rowNumber) {
-        address consent = new Consent(this, signatory);
-        policyEntity[consent].identifier = identifier;
-        policyEntity[consent].typeOf = Entity.Consent;
-        return (consents.push(consent) - 1);
+    function generateConsent(address _signatory, bytes32 _id) IsBinding public returns(uint index) {
+        address consent = new Consent(this, _signatory);
+        entity[consent].id = _id;
+        entity[consent].typeOf = EntityType.Consent;
+        entity[consent].index = consentors.push(consent) - 1;
+        return (entity[consent].index);
     }
 
     //Processor Entities
@@ -97,10 +133,10 @@ contract Policy {
         return processors.length;
     }
     //Create new processor subcontract
-    function newProcessor(address _processor, bytes32 identifier) IsBinding public returns(uint rowNumber) {
+    function newProcessor(address _processor, bytes32 _id) IsBinding public returns(uint index) {
         address processor = new Processor(this, _processor);
-        policyEntity[processor].identifier = identifier;
-        policyEntity[processor].typeOf = Entity.Processor;
+        entity[processor].id = _id;
+        entity[processor].typeOf = EntityType.Processor;
         return (processors.push(processor) - 1);
     }
 
@@ -110,10 +146,10 @@ contract Policy {
         return auditors.length;
     }
     //Create new auditor subcontract
-    function newAuditor(address auditorOwner, bytes32 identifier) IsBinding public returns(uint rowNumber) {
-        address auditor = new Auditor(this, auditorOwner);
-        policyEntity[auditor].identifier = identifier;
-        policyEntity[auditor].typeOf = Entity.Auditor;
+    function newAuditor(address _auditor, bytes32 _id) IsBinding public returns(uint index) {
+        address auditor = new Auditor(this, _auditor);
+        entity[auditor].id = _id;
+        entity[auditor].typeOf = EntityType.Auditor;
         return (auditors.push(auditor) - 1);
     }
 
@@ -131,5 +167,21 @@ contract Policy {
     //Sub function used to assert state and controller
     function StateIs(States _state) returns (bool result) {
         return (msg.sender==controller && state==_state);    
+    }
+
+    //Enforcement
+    address[] public enforcements;
+    mapping(address => bool) isEnforcement;
+
+    function generateEnforce() public returns(uint index) {
+        address enforce = new Enforce(this);
+        isEnforcement[enforce] = true;
+        return ((enforcements.push(enforce)) - 1); //Should return address
+    }
+
+    function payout (address payee) internal {
+        require(isEnforcement[msg.sender]);
+        address enforce = new Enforce(msg.sender);
+        payee.transfer(enforce.getShareValue());
     }
 }
