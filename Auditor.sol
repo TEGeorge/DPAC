@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.22;
 import "./Policy.sol";
 
 contract Auditor {
@@ -15,17 +15,31 @@ contract Auditor {
 
     address auditor;
 
-    function Auditor (address _policy, address _auditor) public {
-        policy = Policy(_policy);
+    function Auditor (address _auditor) public {
+        policy = Policy(msg.sender);
         auditor = _auditor;
     }
 
     function bind () public {
-        require(msg.sender == auditor && state == States.Binding);
+        require(msg.sender == auditor);
         state = States.Binding;
     }
 
-    
+    function enforce () public isBinding returns (address) {
+        return policy.enforce();
+    }
 
+    function participate(address _enforce) isBinding payable {
+        _enforce.transfer(msg.value);
+    }
 
+     function payout (address _enforce) isBinding public {
+        Enforce enforce = Enforce(_enforce);
+        enforce.payout();
+    }
+
+    modifier isBinding() {
+        require(msg.sender == auditor && state == States.Binding);
+        _;
+    }
 }

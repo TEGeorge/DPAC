@@ -1,5 +1,6 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.22;
 import "./Policy.sol";
+import "./Enforce.sol";
 
 contract Processor {
 
@@ -19,21 +20,23 @@ contract Processor {
     struct Document {
         bytes32 id;
         bytes32 hash;
+        bytes32 uri;
     }
 
     Document processorDocument;
 
-    function Processor (address _policy, address _processor) public {
-        policy = Policy(_policy);
+    function Processor (address _processor) public {
+        policy = Policy(msg.sender);
         processor = _processor;
     }
 
-    function addAccessControl (bytes32 _id, bytes32 _hash) public {
-        require (msg.sender == policy.controller() && state == States.Binding);
-        processorDocument = Document(_id, _hash);
+    function setProcessorDocument(bytes32 _id, bytes32 _hash, bytes32 _uri) public {
+        require (msg.sender == policy.controller() && state == States.Proposal);
+        processorDocument = Document(_id, _hash, _uri);
     }
 
     function bind () public {
+        require(msg.sender == processor && state == States.Proposal);
         state = States.Binding;
     }
 
@@ -53,7 +56,7 @@ contract Processor {
         return operationsID.length;
     }
 
-    function newOperation(bytes32 _id, bytes32 _hash, bytes32 _uri) public returns(uint rowNumber) {
+    function operation(bytes32 _id, bytes32 _hash, bytes32 _uri) public returns(uint) {
         require(States.Binding!=operations[_id].state);//Prevent live operations being overwritten
         operations[_id].hash = _hash;
         operations[_id].uri = _uri;
@@ -62,22 +65,21 @@ contract Processor {
     }
 
     //Controller verifies operation
-    function validateOperation(bytes32 _id) {
+    function validateOperation(bytes32 _id, bytes32 _hash) {
+        require (msg.sender == policy.controller() && state == States.Binding);
+        require (_hash == operations[_id].hash);
         operations[_id].state = States.Binding;
     }
     //Check if operation and processor are valid
-    function valid(bytes32 _id) public returns(bool isValid) {
-        if (state == States.Binding && operations[_id].state == States.Binding) {
+    function valid(bytes32 _id, bytes32 _hash) public returns(bool) {
+        if (state == States.Binding && operations[_id].state == States.Binding && operations[_id].hash == _hash) {
             return true;
         }
         return false;
     }
 
-        //Operation memory _operation = Operation(identifier, hash, uri, States.Proposal);
-    
-
-    //function validateOperation(address operationReferencce) {
-        //operations[operationReferencce].state = States.Binding;
-    //}
-
+    function violation () {
+        require(msg.sender == address(policy));
+        state = States.Violation;
+    }
 }

@@ -1,8 +1,11 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.22;
 import "./Policy.sol";
 
 contract Enforce {
 
+    Policy public policy;
+
+    address public initator;
     //Contract States, 
     enum States {
         Proposal, //Before being signed, allows manipulation
@@ -13,7 +16,7 @@ contract Enforce {
 
     States state = States.Proposal; //Set intial state
 
-    //Document data structure
+    //Hold dispute data structure
     struct Dispute {
         bytes32 id;
         bytes32 hash;
@@ -24,36 +27,34 @@ contract Enforce {
 
     Dispute dispute;
 
-    uint public depositValue;
+    //Deposit required - policyvalue / (consent + auditors)
+    uint public deposit;
+    mapping(address => bool) public deposits;
 
+    //Number of consentors at the time of enforcement - Consentors post enforcement do not recieve payout
     uint public consentors;
 
-    uint public policyValue;
-
-    Policy public policy;
-
-    address public initator;
-
+    //Current number of shares - (consentors + participants)
     uint public shares;
 
-    uint public shareValue;
+    //Value of policy at the time of enforcement
+    uint public policyValue;
 
-    function getShareValue() public constant returns (uint) {
-        return shareValue;
-    }
-
+    //Auditors that have participated
     mapping(address => bool) public participants;
-
-    mapping(address => bool) public deposit;
-
+    //Tracks address that have recieved payment
     mapping(address => bool) public payed;
-    
-    function Enforce (address _policy) public {
-        initator = msg.sender;
-        policy = Policy(_policy);
-        policyValue = _policy.balance;
+
+    function Enforce (address _auditor) public {
+        initator = _auditor;
+        policy = Policy(msg.sender);
         consentors = policy.consentCount();
-        depositValue = (consentors + policy.auditorCount()) / policyValue;
+        policyValue = address(policy).balance;
+        deposit = (policyValue - policy.reward() ) / (consentors + policy.auditorCount());
+    }
+    //Calculate share value
+    function getShareValue() public constant returns (uint) {
+        return policyValue / shares;
     }
 
     function setDispute(bytes32 _id, bytes32 _hash, bytes32 _uri, address _processor, bytes32 _operation) {
@@ -61,24 +62,26 @@ contract Enforce {
     }
 
     function initate () public payable {
-        require(msg.value == depositValue);
+        require(msg.value == deposit);
         state = States.Initate;
         shares = consentors + 1;
     }
 
-    function participate () public payable {
-        require(msg.value == depositValue);
+    function () public payable {
+        require(msg.value == deposit);
+        require(state == States.Initate);
         require(policy.isAuditor(msg.sender));
         participants[msg.sender] = true;
-        deposit[msg.sender] = true;
+        deposits[msg.sender] = true;
         shares += 1;
     }
 
     function resolve () public payable {
         state = States.Resolve;
-        shareValue = policy.balance / shares;
-        //Calculate payout
-        //Transfer value
+        if (policy.isAuditor(dispute.processor)) {
+            policy.violation(dispute.processor);
+        }
+
     }
 
     function reject () public {
@@ -89,20 +92,25 @@ contract Enforce {
         uint balance = 0;
         if (state == States.Reject) {
             require(msg.sender == policy.getController());
-            balance = this.balance;
-        } else {
-            require(deposit[msg.sender]);
-            balance = depositValue;
-            deposit[msg.sender] = false;
+            balance = address(this).balance;
+        } else if (state == States.Resolve) {
+            require(deposits[msg.sender]);
+            balance = deposit;
+            deposits[msg.sender] = false;
         }
         msg.sender.transfer(balance);
     }
 
-    function payout (address payee) {
+    function payout () public {
         require(!payed[msg.sender]);
-        require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntity(msg.sender).index <= consentors));
+        require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntity(msg.sender) <= consentors));
         payed[msg.sender] = true;
-        policy.payout(payee);
+        if (msg.sender == initator) {
+
+        } else {
+            
+        }
+        policy.payout();
     }
 
 }

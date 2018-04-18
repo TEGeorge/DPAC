@@ -1,4 +1,4 @@
-pragma solidity ^0.4.11;
+pragma solidity ^0.4.22;
 import "./Consent.sol";
 import "./Processor.sol";
 import "./Auditor.sol";
@@ -28,18 +28,18 @@ contract Policy {
     //Address of the trusted third party for enforcement
     address public authority;
     //Payout percentage value for a successful auditor- default 10%
-    uint public payout = 10;
+    uint public reward = 10;
     //Policy contracts value - represents the value required before contract can be considered valid 
     //if componstation is distributed the value of the contract must meet this value to be considerd valid
-    uint public minValue = this.balance;
-
-    function getController () public constant returns (address) {
-        return controller;
-    }
+    uint public minValue = address(this).balance;
 
     //Constructur setting sender
     function Policy () public {
         controller = msg.sender;
+    }
+    
+    function getController () public constant returns (address) {
+        return controller;
     }
 
     //Define the policy document
@@ -51,9 +51,9 @@ contract Policy {
         authority = _authority;
     }
 
-    function setPayout(uint _percentage) IsProposal private {
+    function setReward(uint _percentage) IsProposal private {
         require(_percentage > 0 && _percentage <= 100);
-        payout = _percentage;
+        reward = _percentage;
     }
 
     //Make Policy live, change state to binding, must be owner & proposal
@@ -63,8 +63,8 @@ contract Policy {
 
     //Fallback function, recieves Ether when transfered to policy address and adds to the value of the contract
     function () payable {
-        if (this.balance + msg.value >= minValue) {
-            minValue = this.balance + msg.value;
+        if (address(this).balance + msg.value >= minValue) {
+            minValue = address(this).balance + msg.value;
         }
     }
 
@@ -91,36 +91,36 @@ contract Policy {
     address[] public auditors;
 
     //Retrieve subcontract metadata associated with address
-    function getEntity(address _entity) public constant returns(Entities entity) {
-        return entity[_entity];
+    function getEntity(address _entity) public constant returns(uint) {
+        return entity[_entity].index;
     }
 
     //Update identifier metadata associated with an address
-    function updateEntityIdentifier(address _entity, bytes32 _id) IsBinding public returns(bool success) {
+    function updateEntityIdentifier(address _entity, bytes32 _id) IsBinding public returns(bool) {
         entity[_entity].id = _id;
         return true;
     }
 
-    function isAuditor(address _auditor) public returns(bool isAuditor) {
+    function isAuditor(address _auditor) public returns(bool) {
         return (entity[_auditor].typeOf == EntityType.Auditor);
     }
 
-    function isConsent(address _consent) public returns(bool isConsent) {
+    function isConsent(address _consent) public returns(bool) {
         return (entity[_consent].typeOf == EntityType.Consent);
     }
 
-    function isProcessor(address _processor) public returns(bool isProcessor) {
+    function isProcessor(address _processor) public returns(bool) {
         return (entity[_processor].typeOf == EntityType.Processor);
     }
 
     //Consent Entities
     //Return length of consent subcontract array
-    function consentCount() public constant returns(uint count) {
+    function consentCount() public constant returns(uint) {
         return consentors.length;
     }
     //Generate Consent subcontract
-    function generateConsent(address _signatory, bytes32 _id) IsBinding public returns(uint index) {
-        address consent = new Consent(this, _signatory);
+    function consent(address _owner, bytes32 _id) IsBinding public returns(uint) {
+        address consent = new Consent(_owner);
         entity[consent].id = _id;
         entity[consent].typeOf = EntityType.Consent;
         entity[consent].index = consentors.push(consent) - 1;
@@ -133,8 +133,8 @@ contract Policy {
         return processors.length;
     }
     //Create new processor subcontract
-    function newProcessor(address _processor, bytes32 _id) IsBinding public returns(uint index) {
-        address processor = new Processor(this, _processor);
+    function processor(address _processor, bytes32 _id) IsBinding public returns(uint) {
+        address processor = new Processor(_processor);
         entity[processor].id = _id;
         entity[processor].typeOf = EntityType.Processor;
         return (processors.push(processor) - 1);
@@ -142,12 +142,12 @@ contract Policy {
 
     //Auditor Entities
     //Return length of auditor subcontract array
-    function auditorCount() public constant returns(uint count) {
+    function auditorCount() public constant returns(uint) {
         return auditors.length;
     }
     //Create new auditor subcontract
-    function newAuditor(address _auditor, bytes32 _id) IsBinding public returns(uint index) {
-        address auditor = new Auditor(this, _auditor);
+    function auditor(address _auditor, bytes32 _id) IsBinding public returns(uint) {
+        address auditor = new Auditor(_auditor);
         entity[auditor].id = _id;
         entity[auditor].typeOf = EntityType.Auditor;
         return (auditors.push(auditor) - 1);
@@ -165,7 +165,7 @@ contract Policy {
         _;
     }
     //Sub function used to assert state and controller
-    function StateIs(States _state) returns (bool result) {
+    function StateIs(States _state) returns (bool) {
         return (msg.sender==controller && state==_state);    
     }
 
@@ -173,15 +173,24 @@ contract Policy {
     address[] public enforcements;
     mapping(address => bool) isEnforcement;
 
-    function generateEnforce() public returns(uint index) {
-        address enforce = new Enforce(this);
+    function enforce() public returns(address) {
+        require(isAuditor(msg.sender));
+        address enforce = new Enforce(msg.sender);
         isEnforcement[enforce] = true;
-        return ((enforcements.push(enforce)) - 1); //Should return address
+        ((enforcements.push(enforce)) - 1);
+        return enforce; //Should return address
     }
 
-    function payout (address payee) internal {
+    function payout () internal {
         require(isEnforcement[msg.sender]);
-        address enforce = new Enforce(msg.sender);
-        payee.transfer(enforce.getShareValue());
+        Enforce enforce = Enforce(msg.sender);
+        uint share = enforce.getShareValue();
+        tx.origin.transfer(share);
+    }
+
+    function violation (address _processor) {
+        require(isEnforcement[msg.sender]);
+        Processor processor = Processor(_processor);
+        processor.violation();
     }
 }
