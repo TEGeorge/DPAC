@@ -25,7 +25,7 @@ contract Enforce {
         bytes32 operation;
     }
 
-    Dispute dispute;
+    Dispute public dispute;
 
     //Deposit required - policyvalue / (consent + auditors)
     uint public deposit;
@@ -41,7 +41,7 @@ contract Enforce {
     uint public policyValue;
 
     //Bool refund
-    bool refund = false;
+    bool public refund = false;
 
     //Auditors that have participated
     mapping(address => bool) public participants;
