@@ -176,7 +176,7 @@ contract Policy {
 
     function enforce() public returns(address) {
         require(isAuditor(msg.sender));
-        Auditor auditor = Auditor(msg.sender)
+        Auditor auditor = Auditor(msg.sender);
         address enforce = new Enforce(auditor.auditor());
         isEnforcement[enforce] = true;
         ((enforcements.push(enforce)) - 1);
