@@ -67,7 +67,7 @@ contract Enforce {
     }
 
     function getInitialDeposit () returns (uint256) {
-        return (address(policy).balance - policy.reward() ) / (consentors + policy.auditorCount());
+        return (address(policy).balance - (address(policy).balance/100) * policy.reward() ) / (consentors + policy.auditorCount());
     }
 
     function initate () public payable {
@@ -90,7 +90,7 @@ contract Enforce {
 
     function resolve () public payable {
         require(state == States.Initate);
-        require(msg.sender == policy.authority() && msg.sender == policy.controller());
+        require(msg.sender == policy.authority() || msg.sender == policy.controller());
         state = States.Resolve;
         if (policy.isProcessor(dispute.processor)) {
             policy.violation(dispute.processor);
@@ -99,14 +99,13 @@ contract Enforce {
 
     function reject (bool _refund) public {
         require(state == States.Initate);
-        require(msg.sender == policy.authority() && msg.sender == policy.controller());
+        require(msg.sender == policy.authority() || msg.sender == policy.controller());
         state = States.Reject;
         refund = _refund;
     }
 
-    //Need to resolve this doesn't work...
     function withdraw () {
-        require(state == States.Reject && state == States.Resolve);
+        require(state == States.Reject || state == States.Resolve);
         uint balance = 0;
         if (!refund) {
             require(msg.sender == policy.controller() || msg.sender == policy.authority());
@@ -120,7 +119,7 @@ contract Enforce {
     }
 
     function payout () public {
-        require(state == States.Reject && state == States.Resolve);
+        require(state == States.Reject || state == States.Resolve);
         require(!payed[msg.sender]);
         require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntityIndex(msg.sender) <= consentors));
         payed[msg.sender] = true;
