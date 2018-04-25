@@ -59,8 +59,8 @@ contract Policy {
 
     //Fallback function, recieves Ether when transfered to policy address and adds to the value of the contract
     function () payable {
-        if (address(this).balance + msg.value >= minValue) {
-            minValue = address(this).balance + msg.value;
+        if (address(this).balance >= minValue) {
+            minValue = address(this).balance;
         }
     }
 
