@@ -54,7 +54,7 @@ contract Enforce {
         consentors = policy.consentCount();
     }
     //Calculate share value
-    function getShareValue(address _requester) public constant returns (uint) {
+    function getShareValue(address _requester) public constant returns (uint256) {
         if (_requester == initator) {
             return ((policyValue / 100) * policy.reward()) + (policyValue / shares);
         } 
@@ -66,8 +66,12 @@ contract Enforce {
         dispute = Dispute(_id, _hash, _uri, _processor, _operation);
     }
 
+    function getInitialDeposit () returns (uint256) {
+        return (address(policy).balance - policy.reward() ) / (consentors + policy.auditorCount());
+    }
+
     function initate () public payable {
-        require(msg.value == deposit && msg.sender == initator && state == States.Proposal);
+        require(msg.value == getInitialDeposit() && msg.sender == initator && state == States.Proposal);
         state = States.Initate;
         shares = consentors + 1;
         policyValue = address(policy).balance;

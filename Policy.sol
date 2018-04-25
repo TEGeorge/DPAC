@@ -182,7 +182,7 @@ contract Policy {
         return enforce; //Should return address
     }
 
-    function payout (uint _share) {
+    function payout (uint256 _share) {
         require(isEnforcement[msg.sender]);
         tx.origin.transfer(_share);
     }
