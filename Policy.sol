@@ -39,21 +39,21 @@ contract Policy {
     }
 
     //Define the policy document
-    function setPolicy (bytes32 _id, bytes32 _hash, bytes32 _uri) IsProposal private {
+    function setPolicy (bytes32 _id, bytes32 _hash, bytes32 _uri) IsProposal public {
         policyDocument = Document(_id, _hash, _uri);
     }
     //Define the policy authority resolves in the case of disputes
-    function setAuthority(address _authority) IsProposal private {
+    function setAuthority(address _authority) IsProposal public {
         authority = _authority;
     }
 
-    function setReward(uint _percentage) IsProposal private {
+    function setReward(uint _percentage) IsProposal public {
         require(_percentage > 0 && _percentage <= 100);
         reward = _percentage;
     }
 
     //Make Policy live, change state to binding, must be owner & proposal
-    function bind() IsProposal private {
+    function bind() IsProposal public {
         state = States.Binding;
     }
 
