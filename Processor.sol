@@ -83,8 +83,4 @@ contract Processor {
         state = States.Violation;
     }
 
-    function withdraw (address ) {
-
-    }
-
 }
