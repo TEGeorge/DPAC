@@ -9,11 +9,11 @@ contract Auditor {
         Binding   //Signed and agreement is live, minimal manipulation
     }
 
-    States state = States.Proposal;
+    States public state = States.Proposal;
 
-    Policy policy;
+    Policy public policy;
 
-    address auditor;
+    address public auditor;
 
     function Auditor (address _auditor) public {
         policy = Policy(msg.sender);
@@ -36,6 +36,11 @@ contract Auditor {
      function payout (address _enforce) isBinding public {
         Enforce enforce = Enforce(_enforce);
         enforce.payout();
+    }
+
+    function withdraw (address _enforce) isBinding public {
+        Enforce enforce = Enforce(_enforce);
+        enforce.withdraw();
     }
 
     modifier isBinding() {
