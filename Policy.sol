@@ -12,7 +12,7 @@ contract Policy {
         Binding   //Signed and policy is live, minimal manipulation
     }
 
-    States state = States.Proposal; //Set intial state
+    States public state = States.Proposal; //Set intial state
 
     //Document data structure
     struct Document {
@@ -36,10 +36,6 @@ contract Policy {
     //Constructur setting sender
     function Policy () public {
         controller = msg.sender;
-    }
-    
-    function getController () public constant returns (address) {
-        return controller;
     }
 
     //Define the policy document
@@ -91,7 +87,7 @@ contract Policy {
     address[] public auditors;
 
     //Retrieve subcontract metadata associated with address
-    function getEntity(address _entity) public constant returns(uint) {
+    function getEntityIndex(address _entity) public constant returns(uint) {
         return entity[_entity].index;
     }
 
@@ -119,7 +115,7 @@ contract Policy {
         return consentors.length;
     }
     //Generate Consent subcontract
-    function consent(address _owner, bytes32 _id) IsBinding public returns(uint) {
+    function consent(address _owner, bytes32 _id) IsBinding IsMinValue public returns(uint) {
         address consent = new Consent(_owner);
         entity[consent].id = _id;
         entity[consent].typeOf = EntityType.Consent;
@@ -133,7 +129,7 @@ contract Policy {
         return processors.length;
     }
     //Create new processor subcontract
-    function processor(address _processor, bytes32 _id) IsBinding public returns(uint) {
+    function processor(address _processor, bytes32 _id) IsBinding IsMinValue public returns(uint) {
         address processor = new Processor(_processor);
         entity[processor].id = _id;
         entity[processor].typeOf = EntityType.Processor;
@@ -146,7 +142,7 @@ contract Policy {
         return auditors.length;
     }
     //Create new auditor subcontract
-    function auditor(address _auditor, bytes32 _id) IsBinding public returns(uint) {
+    function auditor(address _auditor, bytes32 _id) IsBinding IsMinValue public returns(uint) {
         address auditor = new Auditor(_auditor);
         entity[auditor].id = _id;
         entity[auditor].typeOf = EntityType.Auditor;
@@ -157,6 +153,11 @@ contract Policy {
     //Asserts is state is proposal and function call made by controller
     modifier IsProposal() {
         require(StateIs(States.Proposal));
+        _;
+    }
+
+    modifier IsMinValue() {
+        require(minValue==this.balance);
         _;
     }
     //Asserts is state is binding and function call made by controller
@@ -181,11 +182,9 @@ contract Policy {
         return enforce; //Should return address
     }
 
-    function payout () internal {
+    function payout (uint _share) {
         require(isEnforcement[msg.sender]);
-        Enforce enforce = Enforce(msg.sender);
-        uint share = enforce.getShareValue();
-        tx.origin.transfer(share);
+        tx.origin.transfer(_share);
     }
 
     function violation (address _processor) {

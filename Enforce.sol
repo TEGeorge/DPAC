@@ -14,7 +14,7 @@ contract Enforce {
         Resolve
     }
 
-    States state = States.Proposal; //Set intial state
+    States public state = States.Proposal; //Set intial state
 
     //Hold dispute data structure
     struct Dispute {
@@ -40,6 +40,9 @@ contract Enforce {
     //Value of policy at the time of enforcement
     uint public policyValue;
 
+    //Bool refund
+    bool refund = false;
+
     //Auditors that have participated
     mapping(address => bool) public participants;
     //Tracks address that have recieved payment
@@ -49,22 +52,27 @@ contract Enforce {
         initator = _auditor;
         policy = Policy(msg.sender);
         consentors = policy.consentCount();
-        policyValue = address(policy).balance;
-        deposit = (policyValue - policy.reward() ) / (consentors + policy.auditorCount());
     }
     //Calculate share value
-    function getShareValue() public constant returns (uint) {
+    function getShareValue(address _requester) public constant returns (uint) {
+        if (_requester == initator) {
+            return ((policyValue / 100) * policy.reward()) + (policyValue / shares);
+        } 
         return policyValue / shares;
     }
 
     function setDispute(bytes32 _id, bytes32 _hash, bytes32 _uri, address _processor, bytes32 _operation) {
+        require(msg.sender == initator && state == States.Proposal);
         dispute = Dispute(_id, _hash, _uri, _processor, _operation);
     }
 
     function initate () public payable {
-        require(msg.value == deposit);
+        require(msg.value == deposit && msg.sender == initator && state == States.Proposal);
         state = States.Initate;
         shares = consentors + 1;
+        policyValue = address(policy).balance;
+        deposit = (policyValue - policy.reward() ) / (consentors + policy.auditorCount());
+
     }
 
     function () public payable {
@@ -77,40 +85,42 @@ contract Enforce {
     }
 
     function resolve () public payable {
+        require(state == States.Initate);
+        require(msg.sender == policy.authority() && msg.sender == policy.controller());
         state = States.Resolve;
-        if (policy.isAuditor(dispute.processor)) {
+        if (policy.isProcessor(dispute.processor)) {
             policy.violation(dispute.processor);
         }
-
     }
 
-    function reject () public {
+    function reject (bool _refund) public {
+        require(state == States.Initate);
+        require(msg.sender == policy.authority() && msg.sender == policy.controller());
         state = States.Reject;
+        refund = _refund;
     }
 
+    //Need to resolve this doesn't work...
     function withdraw () {
+        require(state == States.Reject && state == States.Resolve);
         uint balance = 0;
-        if (state == States.Reject) {
-            require(msg.sender == policy.getController());
+        if (!refund) {
+            require(msg.sender == policy.controller() || msg.sender == policy.authority());
             balance = address(this).balance;
-        } else if (state == States.Resolve) {
+        } else if (refund) {
             require(deposits[msg.sender]);
             balance = deposit;
             deposits[msg.sender] = false;
         }
-        msg.sender.transfer(balance);
+        tx.origin.transfer(balance);
     }
 
     function payout () public {
+        require(state == States.Reject && state == States.Resolve);
         require(!payed[msg.sender]);
-        require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntity(msg.sender) <= consentors));
+        require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntityIndex(msg.sender) <= consentors));
         payed[msg.sender] = true;
-        if (msg.sender == initator) {
-
-        } else {
-            
-        }
-        policy.payout();
+        policy.payout(getShareValue(msg.sender));
     }
 
 }

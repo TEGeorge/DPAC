@@ -11,11 +11,11 @@ contract Processor {
         Violation //Successful enforcement triggered contract invalid
     }
 
-    States state = States.Proposal;
+    States public state = States.Proposal;
 
-    Policy policy;
+    Policy public policy;
 
-    address processor;
+    address public processor;
 
     struct Document {
         bytes32 id;
@@ -23,7 +23,7 @@ contract Processor {
         bytes32 uri;
     }
 
-    Document processorDocument;
+    Document public processorDocument;
 
     function Processor (address _processor) public {
         policy = Policy(msg.sender);
@@ -46,7 +46,7 @@ contract Processor {
         States state;
     }
     
-    bytes32[] operationsID;
+    bytes32[] public operationsID;
 
     mapping(bytes32 => Operation) public operations;
 
@@ -57,7 +57,7 @@ contract Processor {
     }
 
     function operation(bytes32 _id, bytes32 _hash, bytes32 _uri) public returns(uint) {
-        require(States.Binding!=operations[_id].state);//Prevent live operations being overwritten
+        require(States.Binding!=operations[_id].state && msg.sender==processor);//Prevent live operations being overwritten
         operations[_id].hash = _hash;
         operations[_id].uri = _uri;
         operations[_id].state = States.Proposal;
@@ -82,4 +82,9 @@ contract Processor {
         require(msg.sender == address(policy));
         state = States.Violation;
     }
+
+    function withdraw (address ) {
+
+    }
+
 }

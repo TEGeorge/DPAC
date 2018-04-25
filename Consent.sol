@@ -16,13 +16,13 @@ contract Consent {
         bytes32 uri;
     }
 
-    Document consentDocument;
+    Document public consentDocument;
 
-    States state = States.Proposal;
+    States public state = States.Proposal;
 
-    Policy policy;
+    Policy public policy;
 
-    address owner;
+    address public owner;
 
     function Consent (address _owner) public {
         policy = Policy(msg.sender);
