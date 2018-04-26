@@ -56,9 +56,9 @@ contract Enforce {
     //Calculate share value
     function getShareValue(address _requester) public constant returns (uint256) {
         if (_requester == initator) {
-            return ((policyValue / 100) * policy.reward()) + (policyValue / shares);
+            return ((policyValue / 100) * policy.reward()) + (policyValue - ((policyValue / 100) * policy.reward()) / shares);
         } 
-        return policyValue / shares;
+        return policyValue - ((policyValue / 100) * policy.reward()) / shares;
     }
 
     function setDispute(bytes32 _id, bytes32 _hash, bytes32 _uri, address _processor, bytes32 _operation) {
@@ -67,7 +67,7 @@ contract Enforce {
     }
 
     function getInitialDeposit () returns (uint256) {
-        return (address(policy).balance - policy.reward() ) / (consentors + policy.auditorCount());
+        return (address(policy).balance - (address(policy).balance/100) * policy.reward() ) / (consentors + policy.auditorCount());
     }
 
     function initate () public payable {
@@ -75,11 +75,12 @@ contract Enforce {
         state = States.Initate;
         shares = consentors + 1;
         policyValue = address(policy).balance;
+        deposits[msg.sender] = true;
         deposit = (policyValue - policy.reward() ) / (consentors + policy.auditorCount());
 
     }
 
-    function () public payable {
+    function participate () public payable {
         require(msg.value == deposit);
         require(state == States.Initate);
         require(policy.isAuditor(msg.sender));
@@ -90,8 +91,9 @@ contract Enforce {
 
     function resolve () public payable {
         require(state == States.Initate);
-        require(msg.sender == policy.authority() && msg.sender == policy.controller());
+        require(msg.sender == policy.authority() || msg.sender == policy.controller());
         state = States.Resolve;
+        refund = true;
         if (policy.isProcessor(dispute.processor)) {
             policy.violation(dispute.processor);
         }
@@ -99,13 +101,13 @@ contract Enforce {
 
     function reject (bool _refund) public {
         require(state == States.Initate);
-        require(msg.sender == policy.authority() && msg.sender == policy.controller());
+        require(msg.sender == policy.authority() || msg.sender == policy.controller());
         state = States.Reject;
         refund = _refund;
     }
 
     function withdraw () {
-        require(state == States.Reject && state == States.Resolve);
+        require(state == States.Reject || state == States.Resolve);
         uint balance = 0;
         if (!refund) {
             require(msg.sender == policy.controller() || msg.sender == policy.authority());
@@ -119,9 +121,9 @@ contract Enforce {
     }
 
     function payout () public {
-        require(state == States.Reject && state == States.Resolve);
+        require(state == States.Reject || state == States.Resolve);
         require(!payed[msg.sender]);
-        require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntityIndex(msg.sender) <= consentors));
+        require(participants[msg.sender] || initator == msg.sender || ((policy.isConsent(msg.sender) && policy.getEntityIndex(msg.sender) <= consentors)));
         payed[msg.sender] = true;
         policy.payout(getShareValue(msg.sender));
     }
