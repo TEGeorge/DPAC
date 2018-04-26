@@ -56,9 +56,9 @@ contract Enforce {
     //Calculate share value
     function getShareValue(address _requester) public constant returns (uint256) {
         if (_requester == initator) {
-            return ((policyValue / 100) * policy.reward()) + (policyValue / shares);
+            return ((policyValue / 100) * policy.reward()) + (policyValue - ((policyValue / 100) * policy.reward()) / shares);
         } 
-        return policyValue / shares;
+        return policyValue - ((policyValue / 100) * policy.reward()) / shares;
     }
 
     function setDispute(bytes32 _id, bytes32 _hash, bytes32 _uri, address _processor, bytes32 _operation) {
@@ -75,11 +75,12 @@ contract Enforce {
         state = States.Initate;
         shares = consentors + 1;
         policyValue = address(policy).balance;
+        deposits[msg.sender] = true;
         deposit = (policyValue - policy.reward() ) / (consentors + policy.auditorCount());
 
     }
 
-    function () public payable {
+    function participate () public payable {
         require(msg.value == deposit);
         require(state == States.Initate);
         require(policy.isAuditor(msg.sender));
@@ -92,6 +93,7 @@ contract Enforce {
         require(state == States.Initate);
         require(msg.sender == policy.authority() || msg.sender == policy.controller());
         state = States.Resolve;
+        refund = true;
         if (policy.isProcessor(dispute.processor)) {
             policy.violation(dispute.processor);
         }
@@ -121,7 +123,7 @@ contract Enforce {
     function payout () public {
         require(state == States.Reject || state == States.Resolve);
         require(!payed[msg.sender]);
-        require(participants[msg.sender] || (policy.isConsent(msg.sender) && policy.getEntityIndex(msg.sender) <= consentors));
+        require(participants[msg.sender] || initator == msg.sender || ((policy.isConsent(msg.sender) && policy.getEntityIndex(msg.sender) <= consentors)));
         payed[msg.sender] = true;
         policy.payout(getShareValue(msg.sender));
     }
