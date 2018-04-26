@@ -30,7 +30,8 @@ contract Auditor {
     }
 
     function participate(address _enforce) isBinding payable {
-        _enforce.transfer(msg.value);
+        Enforce enforce = Enforce(_enforce);
+        enforce.participate.value(msg.value)();
     }
 
      function payout (address _enforce) isBinding public {
