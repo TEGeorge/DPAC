@@ -104,7 +104,6 @@ contract Enforce {
         refund = _refund;
     }
 
-    //Need to resolve this doesn't work...
     function withdraw () {
         require(state == States.Reject && state == States.Resolve);
         uint balance = 0;
