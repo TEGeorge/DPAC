@@ -91,12 +91,6 @@ contract Policy {
         return entity[_entity].index;
     }
 
-    //Update identifier metadata associated with an address
-    function updateEntityIdentifier(address _entity, bytes32 _id) IsBinding public returns(bool) {
-        entity[_entity].id = _id;
-        return true;
-    }
-
     function isAuditor(address _auditor) public returns(bool) {
         return (entity[_auditor].typeOf == EntityType.Auditor);
     }
