@@ -101,7 +101,7 @@ contract Enforce {
 
     function reject (bool _refund) public {
         require(state == States.Initate);
-        require(msg.sender == policy.authority() || msg.sender == policy.controller());
+        require(msg.sender == policy.authority());
         state = States.Reject;
         refund = _refund;
     }
