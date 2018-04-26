@@ -110,7 +110,7 @@ contract Enforce {
         require(state == States.Reject || state == States.Resolve);
         uint balance = 0;
         if (!refund) {
-            require(msg.sender == policy.controller() || msg.sender == policy.authority());
+            require(msg.sender == policy.controller());
             balance = address(this).balance;
         } else if (refund) {
             require(deposits[msg.sender]);
